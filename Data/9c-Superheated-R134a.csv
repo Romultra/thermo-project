@@ -1,3 +1,5 @@
+Pressure (MPa),Temperature (°C),Specific volume v (m³/kg),Internal energy u (kJ/kg),Enthalpy h (kJ/kg),Entropy s (kJ/kg·K)
+P,T,v,u,h,s
 0.06,-37.07,0.31003,206.12,224.72,0.952
 0.06,-20,0.33536,217.86,237.98,1.0062
 0.06,-10,0.34992,224.97,245.96,1.0371
