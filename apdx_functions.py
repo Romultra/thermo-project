@@ -28,7 +28,7 @@ def get_apdx_1(gas, request, use_chem_formula=False):
     else:
         return data[request][data['Gas'] == gas].values[0]
 
-def get_apdx_9ab(table_base, relative_to, input, request):
+def get_apdx_9ab(table_base, relative_to, input_value, request):
     """
     Appendix 9: Properties of saturated R134a.
 
@@ -61,17 +61,22 @@ def get_apdx_9ab(table_base, relative_to, input, request):
         data = pd.read_csv('Data/9a-Saturated-R134a-Temperature.csv', header=1)
     else:
         raise ValueError("Invalid table_base. Choose 'Pressure' or 'Temperature'.")
+    
+    if relative_to == 'T':
+        relative_to = 'Tsat'
+    if request == 'T':
+        request = 'Tsat'
 
     data[relative_to] = pd.to_numeric(data[relative_to])  # Convert to numeric
     data[request] = pd.to_numeric(data[request])  # Convert to numeric
 
-    if type(input) == float or type(input) == int:
-        input = np.array([input])
+    if type(input_value) == float or type(input_value) == int:
+        input_value = np.array([input_value])
     
-    output_value = np.interp(input, data[relative_to].to_numpy(), data[request].to_numpy())
-    return output_value
+    output_value = np.interp(input_value, data[relative_to].to_numpy(), data[request].to_numpy())
+    return output_value[0] if np.ndim(output_value)==1 else output_value
 
-def get_apdx_9c(relative_to: tuple, input: tuple, request: str):
+def get_apdx_9c(relative_to: tuple, input_value: tuple, request: str):
     """
     Appendix 9c: Properties of superheated R134a.
 
@@ -105,7 +110,8 @@ def get_apdx_9c(relative_to: tuple, input: tuple, request: str):
     # Prepare points and values
     points = np.column_stack((data[relative_to[0]], data[relative_to[1]]))
 
-    output_value = griddata(points, data[request], (input[0], input[1]), method='linear')
-    return output_value
+    output_value = griddata(points, data[request], (input_value[0], input_value[1]), method='linear')
+    
+    return output_value[0] if np.ndim(output_value)==1 else output_value
 
 # Useful lamda macros
