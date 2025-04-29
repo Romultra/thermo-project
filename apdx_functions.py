@@ -95,17 +95,17 @@ def get_apdx_9c(relative_to: tuple, input: tuple, request: str):
     """
     # Load the new uploaded CSV
     file_path_new = 'Data/9c-Superheated-R134a.csv'
-    df_new = pd.read_csv(file_path_new, header=1)
+    data = pd.read_csv(file_path_new, header=1)
 
     # Convert Pressure and Temperature columns to numeric
-    df_new[relative_to[0]] = pd.to_numeric(df_new[relative_to[0]], errors='coerce')
-    df_new[relative_to[1]] = pd.to_numeric(df_new[relative_to[1]], errors='coerce')
-    df_new[request] = pd.to_numeric(df_new[request], errors='coerce')
+    data[relative_to[0]] = pd.to_numeric(data[relative_to[0]], errors='coerce')
+    data[relative_to[1]] = pd.to_numeric(data[relative_to[1]], errors='coerce')
+    data[request] = pd.to_numeric(data[request], errors='coerce')
 
     # Prepare points and values
-    points = np.column_stack((df_new[relative_to[0]], df_new[relative_to[1]]))
+    points = np.column_stack((data[relative_to[0]], data[relative_to[1]]))
 
-    output_value = griddata(points, df_new[request], (input[0], input[1]), method='linear')
+    output_value = griddata(points, data[request], (input[0], input[1]), method='linear')
     return output_value
 
 # Useful lamda macros
