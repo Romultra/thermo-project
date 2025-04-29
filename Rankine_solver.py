@@ -198,7 +198,7 @@ def system_relations(vars):
     if unknown(vars['COP_hp']):
         # 1) If Qh_dot, Wc_dot known => COP_hp = Qh_dot / Wc_dot
         if known(vars['Qh_dot']) and known(vars['Wc_dot']):
-            vars['COP_hp'] = vars['Qh_dot'] / vars['Wc_dot']
+            vars['COP_hp'] = np.abs(vars['Qh_dot']) / vars['Wc_dot']
 
     return vars
 
@@ -306,8 +306,6 @@ def vars_from_x_and_quality_var(vars, known_var):
         T_min, T_max = -24, 100
 
         if objective(T_min) * objective(T_max) >= 0:
-            print(f'Known variable: {known_var} = {target_value}')
-            print(f"f({T_min}) = {objective(T_min)}, f({T_max}) = {objective(T_max)}")
             raise ValueError("f(a) and f(b) must have different signs for root_scalar to work.")
 
         sol = root_scalar(objective, bracket=[T_min, T_max], method='brentq')
@@ -337,7 +335,6 @@ def x_from_PT_and_var(vars, known_var):
     assert known(vars['P']) or known(vars['T']), "Either P or T must be known."
 
     # Decide the table base and lookup key
-    print(f'T = {vars["T"]}, P = {vars["P"]}, {known_var} = {vars[known_var]}')
     if known(vars['T']):
         table_base = 'Temperature'
         lookup_value = vars['T']
@@ -364,7 +361,7 @@ def saturated_state(variables, state):
     Returns:
     dict: Updated main dictionary with calculated variables.
     """
-    print(f'Calculating state {state}')
+    
     vars = variables[state]
     for var in vars:
         if known(vars[var]) and known(vars['x']) and (var == 'P' or var == 'T'):
@@ -468,15 +465,48 @@ def solve_r_rankine_cycle(variables):
     
     return variables
 
+def plot_Ts_cycle(variables):
+    """
+    Plots the T-s diagram of the Rankine cycle including the vapor dome.
 
-vars = define_empty_variables()
+    Parameters:
+    variables (dict): Main dictionaries containing the variables.
+    """
+    import matplotlib.pyplot as plt
 
-# give the solver *one* piece of information per state
-vars['2']['T'] = -8  # K
-vars['3']['P'] = 0.8 # MPa
-vars['4']['h'] = 200 # kJ/kg
-vars['m_dot'] = 0.1 # kg/s
+    # Get vapor dome data points using tables
+    T_points = np.linspace(-24, 100, 200)  # Temperature range for R134a
+    s_f = []  # Saturated liquid entropy
+    s_g = []  # Saturated vapor entropy
+    
+    for T in T_points:
+        s_f.append(get_apdx_9ab('Temperature', 'T', T, 'sf'))
+        s_g.append(get_apdx_9ab('Temperature', 'T', T, 'sg'))
 
-solved = solve_r_rankine_cycle(vars)
-print(solved)
-print(solved['Wc_dot'], solved['Qh_dot'])
+    # Plot vapor dome
+    plt.plot(s_f, T_points, '-', color='#0071bc')
+    plt.plot(s_g, T_points, '-', color='#0071bc')
+
+    # Extracting the states
+    T = [variables['1']['T'], variables['2']['T'], variables['3']['T'], variables['3b']['T'], variables['4']['T']]
+    s = [variables['1']['s'], variables['2']['s'], variables['3']['s'], variables['3b']['s'], variables['4']['s']]
+
+    # Plot lines connecting the states in sequence and add state labels
+    state_names = ['1', '2', '3', '3b', '4']
+    for i in range(len(s)-1):
+        plt.plot([s[i], s[i+1]], [T[i], T[i+1]], 'k-', marker='o')
+    # Connect last point back to first point
+    plt.plot([s[-1], s[0]], [T[-1], T[0]], 'k--', marker='o')
+
+    plt.annotate('1', (s[0], T[0]), xytext=(-4,-14), textcoords='offset points')
+    plt.annotate('2', (s[1], T[1]), xytext=(-8,-12), textcoords='offset points')
+    plt.annotate('3', (s[2], T[2]), xytext=(-1,6), textcoords='offset points')
+    plt.annotate('3b', (s[3], T[3]), xytext=(-15,-14), textcoords='offset points')
+    plt.annotate('4', (s[4], T[4]), xytext=(-9,5), textcoords='offset points')
+    
+    # Add labels and formatting
+    plt.xlabel('Entropy (kJ/kg·K)')
+    plt.ylabel('Temperature (°C)')
+    plt.title('R134a Rankine Cycle T-s Diagram')
+    plt.grid(False)
+    plt.show()

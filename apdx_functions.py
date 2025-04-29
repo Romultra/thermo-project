@@ -112,6 +112,6 @@ def get_apdx_9c(relative_to: tuple, input_value: tuple, request: str):
 
     output_value = griddata(points, data[request], (input_value[0], input_value[1]), method='linear')
     
-    return output_value[0] if np.ndim(output_value)==1 else output_value
+    return np.float64(output_value) if np.ndim(output_value)==0 else output_value[0] if np.ndim(output_value)==1 else output_value
 
 # Useful lamda macros
