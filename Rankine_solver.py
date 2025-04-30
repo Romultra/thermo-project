@@ -422,12 +422,13 @@ def superheated_state(variables, state):
     return variables
 
 
-def solve_r_rankine_cycle(variables):
+def solve_r_rankine_cycle(variables, verbose=False):
     """
     Solves the reverse rankine cycle using the known variables and calculates the unknown variables.
     
     Parameters:
     variables (dict): Main dictionaries containing the variables.
+    verbose (bool): If True, prints iteration info
     
     Returns:
     dict: Updated main dictionary with calculated variables.
@@ -442,7 +443,13 @@ def solve_r_rankine_cycle(variables):
     
     previous_nan_count = count_nans(variables)
     counter = 0
+    
+    if verbose:
+        print(f"Starting with {previous_nan_count} unknowns")
+        
     while True:
+        counter += 1
+        
         # Calculate system-level variables such as m_dot, Qh_dot, Qc_dot, Wc_dot, etc.
         variables = system_relations(variables)
 
@@ -457,11 +464,14 @@ def solve_r_rankine_cycle(variables):
         variables = superheated_state(variables, '3')
 
         current_nan_count = count_nans(variables)
-        counter += 1
-        print(counter, current_nan_count)
+        
+        if verbose:
+            print(f"Iteration {counter}: {current_nan_count} unknowns")
+
         if current_nan_count == 0 or \
         current_nan_count >= previous_nan_count:
             break
+            
         previous_nan_count = current_nan_count
     
     return variables
