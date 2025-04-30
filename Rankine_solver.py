@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import root_scalar
 from apdx_functions import *
+from IPython.display import display
 
 # Rankine cycle solver
 def known(var):
@@ -509,3 +510,68 @@ def plot_Ts_cycle(variables):
     plt.title('R134a Rankine Cycle T-s Diagram')
     plt.grid(False)
     plt.show()
+
+def display_tables(variables):
+    # Separate system variables and state variables
+    system_vars = {}
+    state_vars = {}
+    
+    # Units for system variables
+    units = {
+        'm_dot': 'kg/s',
+        'Qh_dot': 'kW',
+        'qh': 'kJ/kg',
+        'Qc_dot': 'kW',
+        'qc': 'kJ/kg',
+        'Wc_dot': 'kW',
+        'wc': 'kJ/kg',
+        'n': '-',
+        'COP_hp': '-'
+    }
+    
+    # Units for state variables
+    state_units = {
+        'T': '°C',
+        'P': 'MPa',
+        'v': 'm³/kg',
+        's': 'kJ/kg·K',
+        'h': 'kJ/kg',
+        'u': 'kJ/kg',
+        'x': '-'
+    }
+    
+    # Format numbers to 3 significant figures, keeping significant zeros
+    def format_value(val):
+        if isinstance(val, (int, float, np.number)):
+            # Convert to string with 3 significant figures
+            formatted = '{:.3g}'.format(float(val))
+            # Add trailing zeros if needed to maintain 3 significant figures
+            if '.' not in formatted and len(formatted.replace('-', '')) < 3:
+                # For integers, add decimal point and zeros
+                formatted += '.' + '0' * (3 - len(formatted.replace('-', '')))
+            elif '.' in formatted:
+                significant_digits = len(formatted.replace('.', '').replace('-', '').lstrip('0'))
+                if significant_digits < 3:
+                    formatted += '0' * (3 - significant_digits)
+            return formatted
+        return val
+
+    # Process variables with 3 significant figures
+    for key, value in variables.items():
+        if isinstance(value, dict):
+            state_vars[key] = {k: format_value(v) for k, v in value.items()}
+        else:
+            system_vars[key] = format_value(value)
+
+    # Create state variables table with units
+    state_df = pd.DataFrame(state_vars).T
+    state_df.columns = [f"{col} ({state_units[col]})" for col in state_df.columns]
+    print("\n=== State Variables ===")
+    display(state_df)
+    
+    # Create system variables table with units
+    system_df = pd.DataFrame([(f"{k} ({units[k]})", v) for k, v in system_vars.items()], 
+                           columns=['Variable', 'Value'])
+    system_df.set_index('Variable', inplace=True)
+    print("\n=== System Variables ===")
+    display(system_df)
