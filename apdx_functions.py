@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from scipy.interpolate import griddata
+from scipy.interpolate import griddata, LinearNDInterpolator
 
 def get_apdx_1(gas, request, use_chem_formula=False):
     """
@@ -113,5 +113,45 @@ def get_apdx_9c(relative_to: tuple, input_value: tuple, request: str):
     output_value = griddata(points, data[request], (input_value[0], input_value[1]), method='linear')
     
     return np.float64(output_value) if np.ndim(output_value)==0 else output_value[0] if np.ndim(output_value)==1 else output_value
+
+def plot_3D_appendix_9c():
+    # Load the new uploaded CSV
+    file_path_new = 'Data/9c-Superheated-R134a.csv'
+    df_new = pd.read_csv(file_path_new, header=1)
+
+
+    # Convert Pressure and Temperature columns to numeric
+    df_new['P'] = pd.to_numeric(df_new['P'], errors='coerce')
+    df_new['T'] = pd.to_numeric(df_new['T'], errors='coerce')
+    df_new['s'] = pd.to_numeric(df_new['s'], errors='coerce')
+
+    # Change the grid base here
+    x, xname = df_new['P'].values, 'Pressure (MPa)'
+    y, yname = df_new['T'].values, 'Temperature (°C)'
+    z, zname = df_new['s'].values, 'Entropy (s)'
+
+    xy = np.c_[x, y]   # or just list(zip(x, y))
+    lut2 = LinearNDInterpolator(xy, z)
+    X = np.linspace(min(x), max(x))
+    Y = np.linspace(min(y), max(y))
+    X, Y = np.meshgrid(X, Y)
+
+    import plotly.graph_objects as go
+
+    # Create a 3D surface plot
+    fig = go.Figure(data=[go.Surface(z=lut2(X, Y), x=X, y=Y, colorscale='Viridis')])
+    #fig = go.Figure()
+    # Add scatter points
+    fig.add_trace(go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(size=3, color='black'), name='Data Points'))
+
+    # Update layout
+    fig.update_layout(scene=dict(
+        xaxis_title=xname,
+        yaxis_title=yname,
+        zaxis_title=zname
+    ), title='3D Surface Plot with Data Points')
+
+    # Show the plot
+    fig.show()
 
 # Useful lamda macros

@@ -492,7 +492,6 @@ def plot_Ts_cycle(variables):
     s = [variables['1']['s'], variables['2']['s'], variables['3']['s'], variables['3b']['s'], variables['4']['s']]
 
     # Plot lines connecting the states in sequence and add state labels
-    state_names = ['1', '2', '3', '3b', '4']
     for i in range(len(s)-1):
         plt.plot([s[i], s[i+1]], [T[i], T[i+1]], 'k-', marker='o')
     # Connect last point back to first point
