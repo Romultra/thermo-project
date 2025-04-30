@@ -181,8 +181,8 @@ def system_relations(vars):
 
     if unknown(vars['Wc_dot']):
         # 1) If Qh_dot, Qc_dot known => Wc_dot = Qh_dot - Qc_dot
-        #if known(vars['Qh_dot']) and known(vars['Qc_dot']):
-        #    vars['Wc_dot'] = vars['Qh_dot'] - vars['Qc_dot']
+        if known(vars['Qh_dot']) and known(vars['Qc_dot']):
+            vars['Wc_dot'] = vars['Qh_dot'] - vars['Qc_dot']
         
         # 2) If wc, m_dot known => Wc_dot = wc*m_dot
         if known(vars['wc']) and known(vars['m_dot']):
