@@ -280,42 +280,70 @@ def vars_from_x_and_PT(vars, known_var):
     
     return vars
 
-def vars_from_x_and_quality_var(vars, known_var):
+def vars_from_x_and_quality_var(vars, known_var, verbose=False):
     """
     Fill in all state variables based on known quality (x) and one quality-dependent variable (h, s, or u).
+
+    Parameters:
+    vars (dict): Dictionary containing state variables, including quality 'x'
+    known_var (str): The quality-dependent property that is known ('v', 'h', 's', or 'u').
+    verbose (bool): If True, prints debugging information.
     """
     assert known_var in ['v', 'h', 's', 'u'], "Known variable must be a quality-dependent property."
 
-    x = vars['x']
+    counter = 0
+    for var in ['v', 'h', 's', 'u']:
+        if unknown(vars[var]):
+            counter += 1
+
+    if counter == 0:
+        if verbose:
+            print("All variables are already known.")
+        return vars # All variables are already known
     
+    x = vars['x']
     target_value = vars[known_var]
     table_base = 'Temperature'  # We'll search over T to match the known property
-    
+
+    if verbose:
+        print(f"Starting vars_from_x_and_quality_var for '{known_var}' with target value: {target_value} and quality x: {x}")
+        print(f"Number of unknowns: {counter}")
+
     if x == 0 or x == 1:
         # If x is 0 or 1, we can directly use the saturated properties
         T_sat = get_apdx_9ab(table_base, known_var + ('f' if x == 0 else 'g'), target_value, 'T')
-
+        if verbose:
+            print(f"Quality is {x}, using direct lookup: T_sat = {T_sat}")
     else:
         # If x is not 0 or 1, we need to find T such that the property matches
         def objective(T):
             var_f = get_apdx_9ab(table_base, 'T', T, known_var + 'f')
             var_g = get_apdx_9ab(table_base, 'T', T, known_var + 'g')
             interpolated = (1 - x) * var_f + x * var_g
+            if verbose:
+                print(f"At T = {T:.3f}: var_f = {var_f}, var_g = {var_g}, interpolated = {interpolated}, objective = {interpolated - target_value}")
             return interpolated - target_value
 
         # Root-finding bounds for T [°C] — Range of saturation temperature for R134a in the tables
         T_min, T_max = -24, 100
+        if verbose:
+            print(f"Finding T_sat between {T_min} and {T_max}")
 
         if objective(T_min) * objective(T_max) >= 0:
             raise ValueError("f(a) and f(b) must have different signs for root_scalar to work.")
 
         sol = root_scalar(objective, bracket=[T_min, T_max], method='brentq')
         T_sat = sol.root
+        if verbose:
+            print(f"Root solver converged: T_sat = {T_sat} "
+                  f"(iterations: {sol.iterations}, function calls: {sol.function_calls})")
 
     vars['T'] = T_sat
 
     # Now get the corresponding saturation pressure
     vars['P'] = get_apdx_9ab(table_base, 'T', T_sat, 'P')
+    if verbose:
+        print(f"Calculated saturation pressure: P = {vars['P']} at T_sat = {T_sat}")
 
     # Fill in other state variables using interpolation
     for var in ['v', 'h', 's', 'u']:
@@ -323,7 +351,9 @@ def vars_from_x_and_quality_var(vars, known_var):
             var_f = get_apdx_9ab(table_base, 'T', T_sat, var + 'f')
             var_g = get_apdx_9ab(table_base, 'T', T_sat, var + 'g')
             vars[var] = (1 - x) * var_f + x * var_g
-
+            if verbose:
+                print(f"Interpolated {var}: var_f = {var_f}, var_g = {var_g}, value = {vars[var]}")
+    
     return vars
     
 def x_from_PT_and_var(vars, known_var):
@@ -351,28 +381,37 @@ def x_from_PT_and_var(vars, known_var):
 
     return vars
 
-def saturated_state(variables, state):
+def saturated_state(variables, state, verbose=False):
     """
     Calculates the properties of a saturated state based on the given variables.
     
     Parameters:
     variables (dict): Main dictionaries containing the variables.
     state (int): The state number (1, 2, 3, or 4).
+    verbose (bool): If True, prints debugging information.
     
     Returns:
     dict: Updated main dictionary with calculated variables.
     """
-    
+    if verbose:
+        print(f"Calculating saturated state for state {state}")
+
     vars = variables[state]
     for var in vars:
         if known(vars[var]) and known(vars['x']) and (var == 'P' or var == 'T'):
+            if verbose:
+                print(f"Known variable '{var}' and quality 'x' are both defined. Using them to calculate vars")
             # Get the saturation properties based on the known variable
             vars = vars_from_x_and_PT(vars, var)
         elif known(vars[var]) and (var == 'v' or var == 'h' or var == 's' or var == 'u'):
             # Get the saturation properties based on the known variable
             if known(vars['x']):
-                vars = vars_from_x_and_quality_var(vars, var)
+                if verbose:
+                    print(f"Known variable '{var}' and quality 'x' are both defined. Using them to calculate vars")
+                vars = vars_from_x_and_quality_var(vars, var, verbose=verbose)
             elif known(vars['P']) or known(vars['T']):
+                if verbose:
+                    print(f"Known variable '{var}' and either P or T are defined. Using them to calculate x")
                 vars = x_from_PT_and_var(vars, var)
     variables[state] = vars
 
@@ -458,7 +497,7 @@ def solve_r_rankine_cycle(variables, verbose=False):
         
         # Calculate the properties of the saturated states
         for state in ['1', '2', '3b', '4']:
-            variables = saturated_state(variables, state)
+            variables = saturated_state(variables, state, verbose=verbose)
         
         # Calculate the properties of the superheated state
         variables = superheated_state(variables, '3')
