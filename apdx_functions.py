@@ -116,7 +116,7 @@ def get_apdx_9c(relative_to: tuple, input_value: tuple, request: str):
 
 def plot_3D_appendix_9c():
     # Load the new uploaded CSV
-    file_path_new = 'thermo-project/Data/9c-Superheated-R134a.csv'
+    file_path_new = 'Data/9c-Superheated-R134a.csv'
     df_new = pd.read_csv(file_path_new, header=1)
 
 
@@ -154,5 +154,4 @@ def plot_3D_appendix_9c():
     # Show the plot
     fig.show()
 
-plot_3D_appendix_9c()
 # Useful lamda macros
