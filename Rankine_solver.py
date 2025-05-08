@@ -534,8 +534,11 @@ def plot_Ts_cycle(variables):
         s_g.append(get_apdx_9ab('Temperature', 'T', T, 'sg'))
 
     # Plot vapor dome
-    plt.plot(s_f, T_points, '-', color='#0071bc')
-    plt.plot(s_g, T_points, '-', color='#0071bc')
+    s_combined = s_f + s_g[::-1]  # Concatenate liquid and vapor entropy
+    T_combined = np.concatenate((T_points, T_points[::-1]))
+    plt.plot(s_combined, T_combined, '-', color='#0071bc')
+    #plt.plot(s_f, T_points, '-', color='#0071bc')
+    #plt.plot(s_g, T_points, '-', color='#0071bc')
 
     # Extracting the states
     T = [variables['1']['T'], variables['2']['T'], variables['3']['T'], variables['3b']['T'], variables['4']['T']]
@@ -560,7 +563,7 @@ def plot_Ts_cycle(variables):
     plt.grid(False)
     plt.show()
 
-def display_tables(variables):
+def display_tables(variables, sig_figs=4):
     # Separate system variables and state variables
     system_vars = {}
     state_vars = {}
@@ -589,28 +592,29 @@ def display_tables(variables):
         'x': '-'
     }
     
-    # Format numbers to 3 significant figures, keeping significant zeros
-    def format_value(val):
+    # Format numbers to a given number of significant figures, keeping significant zeros
+    def format_value(val, sig_figs=sig_figs):
         if isinstance(val, (int, float, np.number)):
-            # Convert to string with 3 significant figures
-            formatted = '{:.3g}'.format(float(val))
-            # Add trailing zeros if needed to maintain 3 significant figures
-            if '.' not in formatted and len(formatted.replace('-', '')) < 3:
+            # Convert to string with sig_figs significant figures
+            fmt_str = f"{{:.{sig_figs}g}}"
+            formatted = fmt_str.format(float(val))
+            # Add trailing zeros if needed to maintain sig_figs significant figures
+            if '.' not in formatted and len(formatted.replace('-', '')) < sig_figs:
                 # For integers, add decimal point and zeros
-                formatted += '.' + '0' * (3 - len(formatted.replace('-', '')))
+                formatted += '.' + '0' * (sig_figs - len(formatted.replace('-', '')))
             elif '.' in formatted:
                 significant_digits = len(formatted.replace('.', '').replace('-', '').lstrip('0'))
-                if significant_digits < 3:
-                    formatted += '0' * (3 - significant_digits)
+                if significant_digits < sig_figs:
+                    formatted += '0' * (sig_figs - significant_digits)
             return formatted
         return val
 
-    # Process variables with 3 significant figures
+    # Process variables with the specified number of significant figures
     for key, value in variables.items():
         if isinstance(value, dict):
-            state_vars[key] = {k: format_value(v) for k, v in value.items()}
+            state_vars[key] = {k: format_value(v, sig_figs) for k, v in value.items()}
         else:
-            system_vars[key] = format_value(value)
+            system_vars[key] = format_value(value, sig_figs)
 
     # Create state variables table with units
     state_df = pd.DataFrame(state_vars).T
